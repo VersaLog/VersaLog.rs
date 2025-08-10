@@ -7,7 +7,7 @@ It supports everything from simple usage to advanced, highly customizable config
 ## Installation
 
 ```
-version = "1.5.2"
+cargo add VersaLogrs
 ```
 
 ### Mode
