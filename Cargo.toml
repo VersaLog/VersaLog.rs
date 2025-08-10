@@ -1,11 +1,15 @@
 [package]
-name = "VersaLogrs"
-version = "1.5.3"
+name = "versaLogrs"
+version = "1.5.4"
 edition = "2024"
 authors = ["kaedeek"]
 description = "Versatile logging library."
 license = "MIT"
 repository = "https://github.com/kaedeek/VersaLog.rs"
+
+[lib]
+name = "versalogrs"
+path = "src/lib.rs"
 
 [dependencies]
 notify-rust = "4.11.7"
