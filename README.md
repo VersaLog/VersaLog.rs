@@ -1,7 +1,7 @@
 ## What is VersaLog.rs?
 
 What is VersaLog.rs?
-VersaLog is a powerful and flexible logging library for JavaScript.
+VersaLog is a powerful and flexible logging library for Rust.
 It supports everything from simple usage to advanced, highly customizable configurations to meet a wide range of needs.
 
 ## Installation
