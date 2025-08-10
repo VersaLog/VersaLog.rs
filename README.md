@@ -39,6 +39,6 @@ version = "1.5.2"
 
 ## Sample
 
-**Simple** : [Tap]()  
-**Detailed** : [Tap]()
-**File** : [Tap]()
+**Simple** : [Tap](https://github.com/kaedeek/VersaLog.rs/blob/main/tests/simple_test.rs)  
+**Detailed** : [Tap](https://github.com/kaedeek/VersaLog.rs/blob/main/tests/detailed_test.rs)
+**File** : [Tap](https://github.com/kaedeek/VersaLog.rs/blob/main/tests/file_test.rs)
