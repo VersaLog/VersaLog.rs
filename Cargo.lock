@@ -3,7 +3,7 @@
 version = 4
 
 [[package]]
-name = "Versalogrs"
+name = "VersaLogrs"
 version = "1.5.4"
 dependencies = [
  "backtrace",
