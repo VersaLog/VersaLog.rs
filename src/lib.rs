@@ -3,6 +3,7 @@ use chrono::Local;
 use std::env;
 use std::fs;
 use std::io::Write;
+use backtrace::Backtrace;
 
 pub struct VersaLog {
     mode: String,
@@ -36,20 +37,19 @@ static RESET: &str = "\x1b[0m";
 static VALID_MODES: &[&str] = &["simple", "simple2", "detailed", "file"];
 static VALID_SAVE_LEVELS: &[&str] = &["INFO", "ERROR", "WARNING", "DEBUG", "CRITICAL"];
 
-// Goのバージョンと同様の簡潔なAPI
-pub fn NewVersaLog(mode: &str, show_file: bool, show_tag: bool, tag: &str, enable_all: bool, notice: bool) -> VersaLog {
-    let mode = mode.to_string();
+pub fn NewVersaLog(mode: &str, show_file: bool, show_tag: bool, tag: &str, enable_all: bool, notice: bool, all_save: bool, save_levels: Vec<String>) -> VersaLog {
+    let mode = mode.to_lowercase();
     let tag = tag.to_string();
     
     if !VALID_MODES.contains(&mode.as_str()) {
-        panic!("Invalid mode: {}", mode);
+        panic!("Invalid mode '{}' specified. Valid modes are: simple, simple2, detailed, file", mode);
     }
 
     let mut showFile = show_file;
     let mut showTag = show_tag;
     let mut notice_enabled = notice;
-    let mut allsave = false;
-    let mut savelevels = Vec::new();
+    let mut allsave = all_save;
+    let mut savelevels = save_levels;
 
     if enable_all {
         showFile = true;
@@ -63,7 +63,15 @@ pub fn NewVersaLog(mode: &str, show_file: bool, show_tag: bool, tag: &str, enabl
     }
 
     if allsave {
-        savelevels = VALID_SAVE_LEVELS.iter().map(|s| s.to_string()).collect();
+        if savelevels.is_empty() {
+            savelevels = VALID_SAVE_LEVELS.iter().map(|s| s.to_string()).collect();
+        } else {
+            for level in &savelevels {
+                if !VALID_SAVE_LEVELS.contains(&level.as_str()) {
+                    panic!("Invalid saveLevels specified. Valid levels are: {:?}", VALID_SAVE_LEVELS);
+                }
+            }
+        }
     }
 
     VersaLog {
@@ -78,13 +86,16 @@ pub fn NewVersaLog(mode: &str, show_file: bool, show_tag: bool, tag: &str, enabl
     }
 }
 
-// より簡潔なコンストラクタ（デフォルト値付き）
 pub fn NewVersaLogSimple(mode: &str, tag: &str) -> VersaLog {
-    NewVersaLog(mode, false, false, tag, false, false)
+    NewVersaLog(mode, false, false, tag, false, false, false, Vec::new())
+}
+
+pub fn NewVersaLogSimple2(mode: &str, tag: &str, enable_all: bool) -> VersaLog {
+    NewVersaLog(mode, false, false, tag, enable_all, false, false, Vec::new())
 }
 
 impl VersaLog {
-    pub fn log(&self, msg: String, level: String, tag: Option<String>) {
+    pub fn log(&self, msg: String, level: String, tags: &[&str]) {
         let level = level.to_uppercase();
         
         let color = COLORS.iter()
@@ -102,13 +113,13 @@ impl VersaLog {
             String::new()
         };
         
-        let final_tag = tag.unwrap_or_else(|| {
-            if self.showTag && !self.tag.is_empty() {
-                self.tag.clone()
-            } else {
-                String::new()
-            }
-        });
+        let final_tag = if !tags.is_empty() && !tags[0].is_empty() {
+            tags[0].to_string()
+        } else if self.showTag && !self.tag.is_empty() {
+            self.tag.clone()
+        } else {
+            String::new()
+        };
         
         let (output, plain) = match self.mode.as_str() {
             "simple" => {
@@ -190,56 +201,91 @@ impl VersaLog {
         }
     }
     
-    pub fn Info(&self, msg: &str, tag: Option<&str>) {
-        self.log(msg.to_string(), "INFO".to_string(), tag.map(|s| s.to_string()));
+    pub fn Info(&self, msg: &str, tags: &[&str]) {
+        self.log(msg.to_string(), "INFO".to_string(), tags);
     }
     
-    pub fn Error(&self, msg: &str, tag: Option<&str>) {
-        self.log(msg.to_string(), "ERROR".to_string(), tag.map(|s| s.to_string()));
+    pub fn Error(&self, msg: &str, tags: &[&str]) {
+        self.log(msg.to_string(), "ERROR".to_string(), tags);
     }
     
-    pub fn Warning(&self, msg: &str, tag: Option<&str>) {
-        self.log(msg.to_string(), "WARNING".to_string(), tag.map(|s| s.to_string()));
+    pub fn Warning(&self, msg: &str, tags: &[&str]) {
+        self.log(msg.to_string(), "WARNING".to_string(), tags);
     }
     
-    pub fn Debug(&self, msg: &str, tag: Option<&str>) {
-        self.log(msg.to_string(), "DEBUG".to_string(), tag.map(|s| s.to_string()));
+    pub fn Debug(&self, msg: &str, tags: &[&str]) {
+        self.log(msg.to_string(), "DEBUG".to_string(), tags);
     }
     
-    pub fn Critical(&self, msg: &str, tag: Option<&str>) {
-        self.log(msg.to_string(), "CRITICAL".to_string(), tag.map(|s| s.to_string()));
+    pub fn Critical(&self, msg: &str, tags: &[&str]) {
+        self.log(msg.to_string(), "CRITICAL".to_string(), tags);
     }
 
-    // 下位互換性のための小文字メソッド
-    pub fn info(&self, msg: &str, tag: Option<&str>) {
-        self.Info(msg, tag);
+    pub fn info(&self, msg: &str, tags: &[&str]) {
+        self.Info(msg, tags);
     }
     
-    pub fn error(&self, msg: &str, tag: Option<&str>) {
-        self.Error(msg, tag);
+    pub fn error(&self, msg: &str, tags: &[&str]) {
+        self.Error(msg, tags);
     }
     
-    pub fn warning(&self, msg: &str, tag: Option<&str>) {
-        self.Warning(msg, tag);
+    pub fn warning(&self, msg: &str, tags: &[&str]) {
+        self.Warning(msg, tags);
     }
     
-    pub fn debug(&self, msg: &str, tag: Option<&str>) {
-        self.Debug(msg, tag);
+    pub fn debug(&self, msg: &str, tags: &[&str]) {
+        self.Debug(msg, tags);
     }
     
-    pub fn critical(&self, msg: &str, tag: Option<&str>) {
-        self.Critical(msg, tag);
+    pub fn critical(&self, msg: &str, tags: &[&str]) {
+        self.Critical(msg, tags);
     }
     
+    pub fn Info_no_tag(&self, msg: &str) {
+        self.log(msg.to_string(), "INFO".to_string(), &[]);
+    }
+    
+    pub fn Error_no_tag(&self, msg: &str) {
+        self.log(msg.to_string(), "ERROR".to_string(), &[]);
+    }
+    
+    pub fn Warning_no_tag(&self, msg: &str) {
+        self.log(msg.to_string(), "WARNING".to_string(), &[]);
+    }
+    
+    pub fn Debug_no_tag(&self, msg: &str) {
+        self.log(msg.to_string(), "DEBUG".to_string(), &[]);
+    }
+    
+    pub fn Critical_no_tag(&self, msg: &str) {
+        self.log(msg.to_string(), "CRITICAL".to_string(), &[]);
+    }
+
     fn get_time(&self) -> String {
         Local::now().format("%Y-%m-%d %H:%M:%S").to_string()
     }
     
     fn get_caller(&self) -> String {
-        "main:0".to_string()
+        let bt = Backtrace::new();
+        if let Some(frame) = bt.frames().get(3) {
+            if let Some(symbol) = frame.symbols().first() {
+                if let Some(file) = symbol.filename() {
+                    if let Some(file_name) = file.file_name() {
+                        if let Some(line) = symbol.lineno() {
+                            return format!("{}:{}", file_name.to_string_lossy(), line);
+                        }
+                    }
+                }
+            }
+        }
+        "unknown:0".to_string()
     }
     
-    fn save_log(&self, log_text: String, _level: String) {
+    fn save_log(&self, log_text: String, level: String) {
+        if !self.allsave || !self.savelevels.contains(&level) {
+            return;
+        }
+        
         let cwd = env::current_dir().unwrap_or_else(|_| env::current_dir().unwrap());
         let log_dir = cwd.join("log");
         
