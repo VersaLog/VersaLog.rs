@@ -1,6 +1,6 @@
-use versalogrs::{NewVersaLog, VersaLog};
 use serde::{Deserialize, Serialize};
 use std::error::Error;
+use versalogrs::NewVersaLog;
 
 #[derive(Debug, Deserialize)]
 struct WeatherData {
@@ -29,7 +29,16 @@ struct Wind {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let logger = NewVersaLog("detailed", false, true, "Request", false, false, false, Vec::new());
+    let logger = NewVersaLog(
+        "detailed",
+        false,
+        true,
+        "Request",
+        false,
+        false,
+        false,
+        vec![],
+    );
 
     let api = "http://api.openweathermap.org/data/2.5/weather";
 
@@ -54,12 +63,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let wind_speed = data.wind.speed;
 
         logger.info("success", &[]);
-        
+
         let msg = format!(
             "< {}の天気予報 >\n\n> 天気\n・{}\n\n> 気温\n・{}°C\n\n> 湿度\n・{}%\n\n> 気圧\n・{} hPa\n\n> 風速\n・{} m/s",
             location_name, weather_description, temperature, humidity, pressure, wind_speed
         );
-        
+
         println!("{}", msg);
     } else {
         logger.error("failed", &[]);
