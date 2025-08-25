@@ -120,6 +120,48 @@ fn main() {
     logger.Critical("critical", &[]);
 }
 
+// silent false
+fn main() {
+    let logger = NewVersaLog(
+        "detailed",
+        false,
+        false,
+        "VersaLog",
+        false,
+        false,
+        false,
+        vec![],
+        false,
+    );
+
+    logger.Info("info", &[]);
+    logger.Error("info", &[]);
+    logger.Warning("warning.", &[]);
+    logger.Debug("debug", &[]);
+    logger.Critical("critical", &[]);
+}
+
+// silent true
+fn main() {
+    let logger = NewVersaLog(
+        "detailed",
+        false,
+        false,
+        "VersaLog",
+        false,
+        false,
+        true,
+        vec![],
+        true,
+    );
+
+    logger.Info("info", &[]);
+    logger.Error("info", &[]);
+    logger.Warning("warning.", &[]);
+    logger.Debug("debug", &[]);
+    logger.Critical("critical", &[]);
+}
+
 // enable_all true
 fn main() {
     let logger = NewVersaLog(

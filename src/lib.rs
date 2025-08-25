@@ -4,6 +4,9 @@ use std::env;
 use std::fs;
 use std::io::Write;
 use backtrace::Backtrace;
+use std::sync::mpsc::{channel, Sender};
+use std::thread;
+use std::panic;
 
 pub struct VersaLog {
     mode: String,
@@ -14,6 +17,8 @@ pub struct VersaLog {
     enableall: bool,
     allsave: bool,
     savelevels: Vec<String>,
+    silent: bool,
+    tx: Option<Sender<(String, String)>>,
 }
 
 static COLORS: &[(&str, &str)] = &[
@@ -74,6 +79,29 @@ pub fn NewVersaLog(mode: &str, show_file: bool, show_tag: bool, tag: &str, enabl
         }
     }
 
+    let tx = if allsave {
+        let (tx, rx) = channel::<(String, String)>();
+        thread::spawn(move || {
+            while let Ok((log_text, _level)) = rx.recv() {
+                let cwd = env::current_dir().unwrap_or_else(|_| env::current_dir().unwrap());
+                let log_dir = cwd.join("log");
+                if !log_dir.exists() {
+                    let _ = fs::create_dir_all(&log_dir);
+                }
+                let today = Local::now().format("%Y-%m-%d").to_string();
+                let log_file = log_dir.join(format!("{}.log", today));
+                let log_entry = format!("{}\n", log_text);
+                let _ = fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .write(true)
+                    .open(&log_file)
+                    .and_then(|mut file| file.write_all(log_entry.as_bytes()));
+            }
+        });
+        Some(tx)
+    } else { None };
+
     VersaLog {
         mode,
         tag,
@@ -83,6 +111,8 @@ pub fn NewVersaLog(mode: &str, show_file: bool, show_tag: bool, tag: &str, enabl
         enableall: enable_all,
         allsave,
         savelevels,
+        silent: false,
+        tx,
     }
 }
 
@@ -190,7 +220,9 @@ impl VersaLog {
             }
         };
         
-        println!("{}", output);
+        if !self.silent {
+            println!("{}", output);
+        }
         self.save_log(plain, level.clone());
         
         if self.notice && (level == "ERROR" || level == "CRITICAL") {
@@ -199,6 +231,33 @@ impl VersaLog {
                 .body(&msg)
                 .show();
         }
+    }
+
+    pub fn set_silent(&mut self, silent: bool) {
+        self.silent = silent;
+    }
+
+    pub fn install_panic_hook(self: std::sync::Arc<Self>) {
+        let logger = self.clone();
+        panic::set_hook(Box::new(move |info| {
+            let payload = info.payload();
+            let msg = if let Some(s) = payload.downcast_ref::<&str>() {
+                (*s).to_string()
+            } else if let Some(s) = payload.downcast_ref::<String>() {
+                s.clone()
+            } else {
+                "unknown panic".to_string()
+            };
+
+            let mut details = String::new();
+            if let Some(loc) = info.location() {
+                details.push_str(&format!("at {}:{}:{}\n", loc.file(), loc.line(), loc.column()));
+            }
+            let bt = Backtrace::new();
+            details.push_str(&format!("{:?}", bt));
+
+            logger.Critical_no_tag(&format!("Unhandled panic: {}\n{}", msg, details));
+        }));
     }
     
     pub fn Info(&self, msg: &str, tags: &[&str]) {
@@ -285,17 +344,19 @@ impl VersaLog {
         if !self.allsave || !self.savelevels.contains(&level) {
             return;
         }
-        
+
+        if let Some(tx) = &self.tx {
+            let _ = tx.send((log_text, level));
+            return;
+        }
+
         let cwd = env::current_dir().unwrap_or_else(|_| env::current_dir().unwrap());
         let log_dir = cwd.join("log");
-        
         if !log_dir.exists() {
             let _ = fs::create_dir_all(&log_dir);
         }
-        
         let today = Local::now().format("%Y-%m-%d").to_string();
         let log_file = log_dir.join(format!("{}.log", today));
-        
         let log_entry = format!("{}\n", log_text);
         let _ = fs::OpenOptions::new()
             .create(true)
