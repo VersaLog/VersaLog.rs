@@ -1,5 +1,5 @@
 use notify_rust::Notification;
-use chrono::Local;
+use chrono::{Local, NaiveDate};
 use std::env;
 use std::fs;
 use std::io::Write;
@@ -7,6 +7,7 @@ use backtrace::Backtrace;
 use std::sync::mpsc::{channel, Sender};
 use std::thread;
 use std::panic;
+use std::path::Path;
 
 pub struct VersaLog {
     mode: String,
@@ -19,6 +20,8 @@ pub struct VersaLog {
     savelevels: Vec<String>,
     silent: bool,
     tx: Option<Sender<(String, String)>>,
+    last_cleanup_date: Option<NaiveDate>,
+    catch_exceptions: bool,
 }
 
 static COLORS: &[(&str, &str)] = &[
@@ -42,7 +45,7 @@ static RESET: &str = "\x1b[0m";
 static VALID_MODES: &[&str] = &["simple", "simple2", "detailed", "file"];
 static VALID_SAVE_LEVELS: &[&str] = &["INFO", "ERROR", "WARNING", "DEBUG", "CRITICAL"];
 
-pub fn NewVersaLog(mode: &str, show_file: bool, show_tag: bool, tag: &str, enable_all: bool, notice: bool, all_save: bool, save_levels: Vec<String>) -> VersaLog {
+pub fn NewVersaLog(mode: &str, show_file: bool, show_tag: bool, tag: &str, enable_all: bool, notice: bool, all_save: bool, save_levels: Vec<String>, catch_exceptions: bool) -> VersaLog {
     let mode = mode.to_lowercase();
     let tag = tag.to_string();
     
@@ -113,15 +116,17 @@ pub fn NewVersaLog(mode: &str, show_file: bool, show_tag: bool, tag: &str, enabl
         savelevels,
         silent: false,
         tx,
+        last_cleanup_date: None,
+        catch_exceptions,
     }
 }
 
 pub fn NewVersaLogSimple(mode: &str, tag: &str) -> VersaLog {
-    NewVersaLog(mode, false, false, tag, false, false, false, Vec::new())
+    NewVersaLog(mode, false, false, tag, false, false, false, Vec::new(), false)
 }
 
 pub fn NewVersaLogSimple2(mode: &str, tag: &str, enable_all: bool) -> VersaLog {
-    NewVersaLog(mode, false, false, tag, enable_all, false, false, Vec::new())
+    NewVersaLog(mode, false, false, tag, enable_all, false, false, Vec::new(), false)
 }
 
 impl VersaLog {
@@ -259,6 +264,12 @@ impl VersaLog {
             logger.Critical_no_tag(&format!("Unhandled panic: {}\n{}", msg, details));
         }));
     }
+
+    pub fn handle_exception(&self, exc_type: &str, exc_value: &str, exc_traceback: &str) {
+        let tb_str = format!("Exception Type: {}\nException Value: {}\nTraceback:\n{}", 
+                           exc_type, exc_value, exc_traceback);
+        self.Critical_no_tag(&format!("Unhandled exception:\n{}", tb_str));
+    }
     
     pub fn Info(&self, msg: &str, tags: &[&str]) {
         self.log(msg.to_string(), "INFO".to_string(), tags);
@@ -340,6 +351,40 @@ impl VersaLog {
         "unknown:0".to_string()
     }
     
+    fn cleanup_old_logs(&self, days: i64) {
+        let cwd = env::current_dir().unwrap_or_else(|_| env::current_dir().unwrap());
+        let log_dir = cwd.join("log");
+        
+        if !log_dir.exists() {
+            return;
+        }
+
+        let now = Local::now().naive_local().date();
+        
+        if let Ok(entries) = fs::read_dir(&log_dir) {
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    let path = entry.path();
+                    if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("log") {
+                        if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
+                            if let Ok(file_date) = NaiveDate::parse_from_str(&file_name.replace(".log", ""), "%Y-%m-%d") {
+                                if (now - file_date).num_days() >= days {
+                                    if let Err(e) = fs::remove_file(&path) {
+                                        if !self.silent {
+                                            println!("[LOG CLEANUP WARNING] {} cannot be removed: {}", path.display(), e);
+                                        }
+                                    } else if !self.silent {
+                                        println!("[LOG CLEANUP] removed: {}", path.display());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     fn save_log(&self, log_text: String, level: String) {
         if !self.allsave || !self.savelevels.contains(&level) {
             return;
@@ -347,6 +392,14 @@ impl VersaLog {
 
         if let Some(tx) = &self.tx {
             let _ = tx.send((log_text, level));
+            return;
+        }
+
+        self.save_log_sync(log_text, level);
+    }
+
+    fn save_log_sync(&self, log_text: String, level: String) {
+        if !self.allsave || !self.savelevels.contains(&level) {
             return;
         }
 
@@ -364,5 +417,10 @@ impl VersaLog {
             .write(true)
             .open(&log_file)
             .and_then(|mut file| file.write_all(log_entry.as_bytes()));
+
+        let today_date = Local::now().naive_local().date();
+        if self.last_cleanup_date != Some(today_date) {
+            self.cleanup_old_logs(7);
+        }
     }
 }
