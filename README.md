@@ -1,3 +1,7 @@
+[![Crates.io](https://img.shields.io/crates/v/VersaLogrs.svg)](https://crates.io/crates/VersaLogrs)
+[![Crates.io Downloads](https://img.shields.io/crates/d/VersaLogrs.svg)](https://crates.io/crates/VersaLogrs)
+[![Docs.rs](https://docs.rs/VersaLogrs/badge.svg)](https://docs.rs/VersaLogrs)
+
 ## What is VersaLog.rs?
 
 What is VersaLog.rs?
@@ -38,9 +42,3 @@ cargo add VersaLogrs
 ```
 [2025-08-06 04:10:36][INFO] : ok
 ```
-
-## Sample
-
-**Simple** : [Tap](https://github.com/kaedeek/VersaLog.rs/blob/main/tests/simple_test.rs)  
-**Detailed** : [Tap](https://github.com/kaedeek/VersaLog.rs/blob/main/tests/detailed_test.rs)
-**File** : [Tap](https://github.com/kaedeek/VersaLog.rs/blob/main/tests/file_test.rs)
