@@ -7,7 +7,6 @@ use backtrace::Backtrace;
 use std::sync::mpsc::{channel, Sender};
 use std::thread;
 use std::panic;
-use std::path::Path;
 
 pub struct VersaLog {
     enum_mode: String,
@@ -49,7 +48,7 @@ pub fn NewVersaLog(enum_mode: &str, show_file: bool, show_tag: bool, tag: &str, 
     let mode = enum_mode.to_lowercase();
     let tag = tag.to_string();
     
-    if !VALID_MODES.contains(&enum_mode.as_str()) {
+    if !VALID_MODES.contains(&enum_mode) {
         panic!("Invalid mode '{}' specified. Valid modes are: simple, simple2, detailed, file", enum_mode);
     }
 
@@ -106,7 +105,7 @@ pub fn NewVersaLog(enum_mode: &str, show_file: bool, show_tag: bool, tag: &str, 
     } else { None };
 
     VersaLog {
-        enum_mode,
+        enum_mode: enum_mode.to_string(),
         tag,
         showFile,
         showTag,
