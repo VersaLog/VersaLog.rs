@@ -10,7 +10,7 @@ use std::panic;
 use std::path::Path;
 
 pub struct VersaLog {
-    mode: String,
+    enum_mode: String,
     tag: String,
     showFile: bool,
     showTag: bool,
@@ -45,12 +45,12 @@ static RESET: &str = "\x1b[0m";
 static VALID_MODES: &[&str] = &["simple", "simple2", "detailed", "file"];
 static VALID_SAVE_LEVELS: &[&str] = &["INFO", "ERROR", "WARNING", "DEBUG", "CRITICAL"];
 
-pub fn NewVersaLog(mode: &str, show_file: bool, show_tag: bool, tag: &str, enable_all: bool, notice: bool, all_save: bool, save_levels: Vec<String>, catch_exceptions: bool) -> VersaLog {
-    let mode = mode.to_lowercase();
+pub fn NewVersaLog(enum_mode: &str, show_file: bool, show_tag: bool, tag: &str, enable_all: bool, notice: bool, all_save: bool, save_levels: Vec<String>, catch_exceptions: bool) -> VersaLog {
+    let mode = enum_mode.to_lowercase();
     let tag = tag.to_string();
     
-    if !VALID_MODES.contains(&mode.as_str()) {
-        panic!("Invalid mode '{}' specified. Valid modes are: simple, simple2, detailed, file", mode);
+    if !VALID_MODES.contains(&enum_mode.as_str()) {
+        panic!("Invalid mode '{}' specified. Valid modes are: simple, simple2, detailed, file", enum_mode);
     }
 
     let mut showFile = show_file;
@@ -66,7 +66,7 @@ pub fn NewVersaLog(mode: &str, show_file: bool, show_tag: bool, tag: &str, enabl
         allsave = true;
     }
 
-    if mode == "file" {
+    if enum_mode == "file" {
         showFile = true;
     }
 
@@ -106,7 +106,7 @@ pub fn NewVersaLog(mode: &str, show_file: bool, show_tag: bool, tag: &str, enabl
     } else { None };
 
     VersaLog {
-        mode,
+        enum_mode,
         tag,
         showFile,
         showTag,
@@ -121,12 +121,12 @@ pub fn NewVersaLog(mode: &str, show_file: bool, show_tag: bool, tag: &str, enabl
     }
 }
 
-pub fn NewVersaLogSimple(mode: &str, tag: &str) -> VersaLog {
-    NewVersaLog(mode, false, false, tag, false, false, false, Vec::new(), false)
+pub fn NewVersaLogSimple(enum_mode: &str, tag: &str) -> VersaLog {
+    NewVersaLog(enum_mode, false, false, tag, false, false, false, Vec::new(), false)
 }
 
-pub fn NewVersaLogSimple2(mode: &str, tag: &str, enable_all: bool) -> VersaLog {
-    NewVersaLog(mode, false, false, tag, enable_all, false, false, Vec::new(), false)
+pub fn NewVersaLogSimple2(enum_mode: &str, tag: &str, enable_all: bool) -> VersaLog {
+    NewVersaLog(enum_mode, false, false, tag, enable_all, false, false, Vec::new(), false)
 }
 
 impl VersaLog {
@@ -142,7 +142,7 @@ impl VersaLog {
             .map(|(_, s)| *s)
             .unwrap_or("");
         
-        let caller = if self.showFile || self.mode == "file" {
+        let caller = if self.showFile || self.enum_mode == "file" {
             self.get_caller()
         } else {
             String::new()
@@ -156,7 +156,7 @@ impl VersaLog {
             String::new()
         };
         
-        let (output, plain) = match self.mode.as_str() {
+        let (output, plain) = match self.enum_mode.as_str() {
             "simple" => {
                 if self.showFile {
                     if !final_tag.is_empty() {
