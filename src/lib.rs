@@ -55,7 +55,7 @@ pub fn NewVersaLog(
     save_levels: Vec<String>,
     catch_exceptions: bool,
 ) -> VersaLog {
-    let mode = enum_mode.to_lowercase();
+    let _mode = enum_mode.to_lowercase();
     let tag = tag.to_string();
 
     if !VALID_MODES.contains(&enum_mode) {
@@ -256,7 +256,7 @@ impl VersaLog {
             }
             _ => {
                 let timestamp = self.get_time();
-                let mut output = format!("[{}]{}{}[{}]{}", timestamp, color, level, RESET);
+                let mut output = format!("[{}] {}{} [{}] {}", timestamp, color, level, RESET);
                 let mut plain = format!("[{}][{}]", timestamp, level);
 
                 if !final_tag.is_empty() {
