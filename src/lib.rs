@@ -256,7 +256,7 @@ impl VersaLog {
             }
             _ => {
                 let timestamp = self.get_time();
-                let mut output = format!("[{}] {}{} [{}] {}", timestamp, color, level, RESET);
+                let mut output = format!("[{}] {}{} [{}] {}", timestamp, color, level, final_tag, RESET);
                 let mut plain = format!("[{}][{}]", timestamp, level);
 
                 if !final_tag.is_empty() {
