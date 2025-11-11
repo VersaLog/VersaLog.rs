@@ -256,22 +256,21 @@ impl VersaLog {
             }
             _ => {
                 let timestamp = self.get_time();
-                let mut output = format!("[{}] {}{} [{}] {}", timestamp, color, level, final_tag, RESET);
-                let mut plain = format!("[{}][{}]", timestamp, level);
-
+                let mut parts = vec![format!("[{}]", timestamp)];
+                
+                parts.push(format!("{}[{}]{}", color, level, RESET));
+                
                 if !final_tag.is_empty() {
-                    output.push_str(&format!("[{}]", final_tag));
-                    plain.push_str(&format!("[{}]", final_tag));
+                    parts.push(format!("[{}]", final_tag));
                 }
-
+                
                 if self.showFile {
-                    output.push_str(&format!("[{}]", caller));
-                    plain.push_str(&format!("[{}]", caller));
+                    parts.push(format!("[{}]", caller));
                 }
-
-                output.push_str(&format!(" : {}", msg));
-                plain.push_str(&format!(" : {}", msg));
-
+                
+                let output = format!("{} {}", parts.join(""), msg);
+                let plain = format!("{} {}", parts.join(""), msg);
+                
                 (output, plain)
             }
         };
