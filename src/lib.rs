@@ -1,4 +1,4 @@
-use backtrace::Backtrace;
+ use backtrace::Backtrace;
 use chrono::{Local, NaiveDate};
 use notify_rust::Notification;
 use std::env;
@@ -250,9 +250,9 @@ impl VersaLog {
                 }
             }
             "file" => {
-                let output = format!("[{}]{}{}[{}]{}", caller, color, level, RESET, msg);
-                let plain = format!("[{}][{}] {}", caller, level, msg);
-                (output, plain)
+                 let output = format!("[{}] {}{} [{}] {}", caller, color, level, RESET, msg);
+                 let plain = format!("[{}][{}] {}", caller, level, msg);
+                 (output, plain)
             }
             _ => {
                 let timestamp = self.get_time();
