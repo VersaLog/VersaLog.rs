@@ -12,7 +12,7 @@ It supports everything from simple usage to advanced, highly customizable config
 
 Join our Discord server for support, questions, and community discussions:
 
-[![Discord](https://img.shields.io/badge/Discord-Support%20Server-7289DA?style=flat&logo=discord)](https://discord.gg/Et2GNZUb)
+[![Discord](https://img.shields.io/badge/Discord-Support%20Server-7289DA?style=flat&logo=discord)](https://discord.gg/cY8QxHN5)
 
 ## Installation
 
