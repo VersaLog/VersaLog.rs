@@ -44,6 +44,13 @@ static RESET: &str = "\x1b[0m";
 static VALID_MODES: &[&str] = &["simple", "simple2", "detailed", "file"];
 static VALID_SAVE_LEVELS: &[&str] = &["INFO", "ERROR", "WARNING", "DEBUG", "CRITICAL"];
 
+pub struct TimerGuard<'a> {
+    logger: &'a VersaLog,
+    title: String,
+    tags: Vec<String>,
+    start: Instant,
+}
+
 pub fn NewVersaLog(
     enum_mode: &str,
     show_file: bool,
@@ -164,6 +171,18 @@ pub fn NewVersaLogSimple2(enum_mode: &str, tag: &str, enable_all: bool) -> Versa
         Vec::new(),
         false,
     )
+}
+
+impl<'a> Drop for TimerGuard<'a> {
+    fn drop(&mut self) {
+        let elapsed = self.start.elapsed().as_secs_f64();
+        let msg = format!("{} : done ({:.2}s)", self.title, elapsed);
+
+        let tag_refs: Vec<&str> =
+            self.tags.iter().map(|s| s.as_str()).collect();
+
+        self.logger.Info(&msg, &tag_refs);
+    }
 }
 
 impl VersaLog {
@@ -390,6 +409,34 @@ impl VersaLog {
 
     fn get_time(&self) -> String {
         Local::now().format("%Y-%m-%d %H:%M:%S").to_string()
+    }
+
+    pub fn Step(&self, title: &str, step: usize, total: usize, tags: &[&str]) {
+        let msg = format!("[STEP {}/{}] {}", step, total, title);
+        self.Info(&msg, tags);
+    }
+    
+    pub fn Progress(&self, title: &str, current: usize, total: usize, tags: &[&str]) {
+        let percent = if total > 0 {
+            (current as f64 / total as f64 * 100.0) as usize
+        } else {
+            0
+        };
+
+        let msg = format!("{} : {}% ({}/{})", title, percent, current, total);
+        self.Info(&msg, tags);
+    }
+
+    pub fn Timer<'a>(&'a self, title: &str, tags: &[&str]) -> TimerGuard<'a> {
+        let msg = format!("{} : start", title);
+        self.Info(&msg, tags);
+
+        TimerGuard {
+            logger: self,
+            title: title.to_string(),
+            tags: tags.iter().map(|s| s.to_string()).collect(),
+            start: Instant::now(),
+        }
     }
 
     fn get_caller(&self) -> String {
