@@ -7,6 +7,7 @@ use std::io::Write;
 use std::panic;
 use std::sync::mpsc::{Sender, channel};
 use std::thread;
+use std::time::Instant;
 
 pub struct VersaLog {
     enum_mode: String,
